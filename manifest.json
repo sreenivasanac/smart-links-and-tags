@@ -1,0 +1,10 @@
+{
+	"id": "smart-links-and-tags",
+	"name": "Smart Links and Tags",
+	"version": "1.0.0",
+	"minAppVersion": "1.5.7",
+	"description": "Notion-style editing for links and tags: choose how pasted URLs are inserted, edit links in a dialog, link notes with @, and pick or remove tags from a dropdown.",
+	"author": "Sreenivasan AC",
+	"authorUrl": "https://github.com/sreenivasanac",
+	"isDesktopOnly": false
+}
