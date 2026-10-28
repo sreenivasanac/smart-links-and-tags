@@ -1,5 +1,5 @@
-import { Editor, EditorPosition, EditorSuggest, EditorSuggestContext, EditorSuggestTriggerInfo, MarkdownView } from 'obsidian';
-import type { EditorView } from '@codemirror/view';
+import { Editor, EditorPosition, EditorSuggest, EditorSuggestContext, EditorSuggestTriggerInfo } from 'obsidian';
+import { locateInEditor } from './editor-dom';
 import { addHoverButton } from './hover-button';
 import type SmartLinksAndTagsPlugin from './main';
 
@@ -8,11 +8,17 @@ const MAX_RESULTS = 10;
 const TAG_CHARS = '[\\p{L}\\p{N}_/-]';
 const TRIGGER = new RegExp(`(?:^|\\s)#(${TAG_CHARS}*)$`, 'u');
 const TAG_IN_LINE = new RegExp(`#${TAG_CHARS}+`, 'gu');
+const ALL_DIGITS = /^\d+$/;
 
 interface TagOption {
 	tag: string;
 	count: number;
 	create?: boolean;
+}
+
+/** Tag usage counts keyed by "#tag" (MetadataCache.getTags is not in the public typings). */
+function tagCounts(plugin: SmartLinksAndTagsPlugin): Record<string, number> {
+	return (plugin.app.metadataCache as unknown as { getTags(): Record<string, number> }).getTags();
 }
 
 /**
@@ -34,15 +40,14 @@ export class TagSuggest extends EditorSuggest<TagOption> {
 
 	getSuggestions(context: EditorSuggestContext): TagOption[] {
 		const query = context.query.toLowerCase();
-		const counts = (this.app.metadataCache as unknown as { getTags(): Record<string, number> }).getTags();
-		const options: TagOption[] = Object.entries(counts)
+		const options: TagOption[] = Object.entries(tagCounts(this.plugin))
 			.map(([tag, count]) => ({ tag: tag.slice(1), count }))
 			.filter((t) => t.tag.toLowerCase().includes(query))
 			.sort((a, b) => b.count - a.count)
 			.slice(0, MAX_RESULTS);
 		// Obsidian doesn't treat all-number tags as tags, so don't offer creating one.
 		const exists = options.some((t) => t.tag.toLowerCase() === query);
-		if (context.query && !exists && !/^\d+$/.test(context.query)) {
+		if (context.query && !exists && !ALL_DIGITS.test(context.query)) {
 			options.push({ tag: context.query, count: 0, create: true });
 		}
 		return options;
@@ -66,25 +71,27 @@ export class TagSuggest extends EditorSuggest<TagOption> {
 
 /** Removes the tag rendered by `el`, together with one neighbouring space. */
 function removeTagAt(plugin: SmartLinksAndTagsPlugin, el: HTMLElement): void {
-	const leaf = plugin.app.workspace.getLeavesOfType('markdown').find((l) => l.view.containerEl.contains(el));
-	const cm = leaf?.view instanceof MarkdownView ? (leaf.view.editor as { cm?: EditorView }).cm : undefined;
-	if (!cm) return;
-	let pos: number;
-	try {
-		pos = cm.posAtDOM(el);
-	} catch {
-		return;
-	}
-	const line = cm.state.doc.lineAt(pos);
+	const hit = locateInEditor(plugin.app, el);
+	if (!hit) return;
+	const line = hit.cm.state.doc.lineAt(hit.pos);
 	for (const m of line.text.matchAll(TAG_IN_LINE)) {
 		let from = line.from + m.index;
 		let to = from + m[0].length;
-		if (pos < from || pos > to) continue;
+		if (hit.pos < from || hit.pos > to) continue;
 		if (line.text[to - line.from] === ' ') to++;
 		else if (from > line.from && line.text[from - line.from - 1] === ' ') from--;
-		cm.dispatch({ changes: { from, to } });
+		hit.cm.dispatch({ changes: { from, to } });
 		return;
 	}
+}
+
+/** A tag renders as several spans ("#" + name); the button sits next to the last one. */
+function lastTagSpan(el: HTMLElement): HTMLElement {
+	let end = el;
+	while (end.nextElementSibling?.instanceOf(HTMLElement) && end.nextElementSibling.hasClass('cm-hashtag')) {
+		end = end.nextElementSibling;
+	}
+	return end;
 }
 
 export function registerTagRemoveButton(plugin: SmartLinksAndTagsPlugin): void {
@@ -94,14 +101,7 @@ export function registerTagRemoveButton(plugin: SmartLinksAndTagsPlugin): void {
 		label: 'Remove tag',
 		cls: 'slt-tag-remove',
 		enabled: () => plugin.settings.tagRemoveButton,
-		// A tag renders as several spans ("#" + name); sit next to the last one.
-		anchor: (el) => {
-			let end = el;
-			while (end.nextElementSibling instanceof HTMLElement && end.nextElementSibling.hasClass('cm-hashtag')) {
-				end = end.nextElementSibling;
-			}
-			return end;
-		},
+		anchor: lastTagSpan,
 		onClick: (el) => removeTagAt(plugin, el),
 	});
 }

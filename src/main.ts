@@ -53,10 +53,7 @@ export default class SmartLinksAndTagsPlugin extends Plugin {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, (await this.loadData()) as Partial<SmartLinksSettings>);
 	}
 
-	async saveSettings(): Promise<void> {
-		await this.saveData(this.settings);
-	}
-
+	/** Whether the cursor is inside a fenced code block (counts the fences above it). */
 	private inCodeBlock(editor: Editor): boolean {
 		let fences = 0;
 		const cursorLine = editor.getCursor().line;
@@ -66,6 +63,7 @@ export default class SmartLinksAndTagsPlugin extends Plugin {
 		return fences % 2 === 1;
 	}
 
+	/** Moves `suggest` to the front of the internal suggest list (not in the public typings). */
 	private prioritizeSuggest(suggest: EditorSuggest<unknown>): void {
 		const registry = (this.app.workspace as unknown as { editorSuggest?: { suggests?: EditorSuggest<unknown>[] } }).editorSuggest;
 		const list = registry?.suggests;

@@ -74,12 +74,11 @@ class LinkModal extends Modal {
 			buttons.addButton((b) =>
 				b
 					.setButtonText('Remove link')
+					.setDestructive()
 					.onClick(() => {
 						this.close();
 						this.onDone({ action: 'unlink' });
-					})
-					// Warning style that works on every version (setDestructive() is 1.13+).
-					.buttonEl.addClass('mod-warning'),
+					}),
 			);
 		}
 		buttons.addButton((b) => b.setButtonText('Cancel').onClick(() => this.close()));

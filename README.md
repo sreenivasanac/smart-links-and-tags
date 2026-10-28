@@ -8,6 +8,8 @@ Notion-style editing for links, note mentions and tags in Obsidian. Every featur
 
 Paste a URL and a small menu asks how to insert it:
 
+![Pasting a URL shows a menu; Enter inserts a link titled with the page title](https://raw.githubusercontent.com/sreenivasanac/smart-links-and-tags/main/docs/paste-demo.gif)
+
 - **Paste as titled link:** fetches the page title and inserts `[Page title](url)`.
 - **Paste as plain URL.**
 - **Paste as pill (icon and title):** optional. It inserts an empty-text link `[](url)`, which the [Link Mention](https://github.com/robcc/obsidian-link-mention-plugin) plugin renders as a favicon-and-title pill.
@@ -18,21 +20,36 @@ The first option is preselected, so <kbd>Enter</kbd> right after pasting picks i
 
 - Hover any external link to show an edit button (⋯). It opens a dialog with the link's text and URL, plus **Remove link**.
 - The **Add or edit link** command does the same at the cursor, or turns selected text into a link. You can assign it a hotkey or add it to a toolbar.
+
+![Edit button next to a hovered link](https://raw.githubusercontent.com/sreenivasanac/smart-links-and-tags/main/docs/edit-button.png)
+
+![Edit link dialog with Text, URL, Update, Remove link and Cancel](https://raw.githubusercontent.com/sreenivasanac/smart-links-and-tags/main/docs/link-editor.png)
+
 - Optionally, the cursor treats each `[text](url)` as a single unit: it steps over the link instead of into its markdown.
 
 ### Link notes with @
 
 Type `@` to choose from your recently opened notes. Keep typing to search all notes: name matches come first, then folder path matches. The inserted link follows your **Files and links** settings (wikilink or markdown). An `@` inside a word, as in an email address, doesn't open the list.
 
+![Typing @gar suggests the note Garden redesign](https://raw.githubusercontent.com/sreenivasanac/smart-links-and-tags/main/docs/mention.png)
+
 ### Tag picker
 
 Type `#` to see your tags sorted by how often you use them, with their counts. Keep typing to filter, or pick **Create #…** to add a new tag. Nested tags (`#area/topic`) and non-English letters are supported.
+
+![Typing # lists existing tags with usage counts](https://raw.githubusercontent.com/sreenivasanac/smart-links-and-tags/main/docs/tag-picker.png)
 
 A `#` at the start of a line normally makes it look like an empty large heading while you type. This plugin keeps that line at normal size.
 
 ### Remove tags with one click
 
 Hover a tag to show a remove button (×). It deletes the tag and the space next to it.
+
+![Remove button next to a hovered tag](https://raw.githubusercontent.com/sreenivasanac/smart-links-and-tags/main/docs/tag-remove.png)
+
+## Requirements
+
+Obsidian 1.13 or later. Works on desktop and mobile; the hover buttons need a mouse or trackpad.
 
 ## Settings
 
@@ -55,10 +72,10 @@ To install it manually, copy `main.js`, `manifest.json` and `styles.css` from th
 ## Development
 
 ```bash
-pnpm install
-pnpm run dev    # rebuilds main.js on every change
-pnpm run build  # type-check and production build
-pnpm run lint
+npm install
+npm run dev    # rebuilds main.js on every change
+npm run build  # type-check and production build
+npm run lint
 ```
 
 ## License

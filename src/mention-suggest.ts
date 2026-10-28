@@ -23,10 +23,11 @@ export class MentionSuggest extends EditorSuggest<TFile> {
 	getSuggestions(context: EditorSuggestContext): TFile[] {
 		const query = context.query.toLowerCase();
 		if (!query) {
+			// Recent notes, minus the one being edited.
 			return this.app.workspace
 				.getLastOpenFiles()
 				.map((path) => this.app.vault.getFileByPath(path))
-				.filter((file): file is TFile => file?.extension === 'md')
+				.filter((file): file is TFile => file?.extension === 'md' && file !== context.file)
 				.slice(0, RECENT_COUNT);
 		}
 		// Name prefix matches first, then name substring, then folder path matches.

@@ -1,6 +1,6 @@
-import { MarkdownView } from 'obsidian';
 import { Decoration, EditorView } from '@codemirror/view';
 import { RangeSetBuilder } from '@codemirror/state';
+import { locateInEditor } from './editor-dom';
 import { addHoverButton } from './hover-button';
 import { linkAt, openLinkEditor } from './links';
 import type SmartLinksAndTagsPlugin from './main';
@@ -29,18 +29,11 @@ function atomicLinks(plugin: SmartLinksAndTagsPlugin) {
 
 /** Opens the link editor for the link rendered by `el`. */
 function editLinkAt(plugin: SmartLinksAndTagsPlugin, el: HTMLElement): void {
-	const view = plugin.app.workspace.getActiveViewOfType(MarkdownView);
-	const cm = (view?.editor as { cm?: EditorView } | undefined)?.cm;
-	if (!view || !cm) return;
-	let pos: number;
-	try {
-		pos = cm.posAtDOM(el);
-	} catch {
-		return;
-	}
-	const line = cm.state.doc.lineAt(pos);
-	const hit = linkAt(line.text, pos - line.from);
-	if (hit) openLinkEditor(plugin.app, view.editor, line.number - 1, hit);
+	const hit = locateInEditor(plugin.app, el);
+	if (!hit) return;
+	const line = hit.cm.state.doc.lineAt(hit.pos);
+	const link = linkAt(line.text, hit.pos - line.from);
+	if (link) openLinkEditor(plugin.app, hit.view.editor, line.number - 1, link);
 }
 
 export function registerLinkEditing(plugin: SmartLinksAndTagsPlugin): void {
