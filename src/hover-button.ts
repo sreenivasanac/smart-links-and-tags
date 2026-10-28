@@ -19,59 +19,72 @@ const HIDE_DELAY_MS = 250;
  * element matching `selector` is hovered, and stays up briefly so the
  * pointer can travel onto it. Works in the main window and pop-out windows.
  */
-export function addHoverButton(plugin: Plugin, opts: HoverButtonOptions): void {
-	const button = createDiv({ cls: ['slt-hover-button', opts.cls], attr: { 'aria-label': opts.label, role: 'button' } });
-	setIcon(button, opts.icon);
-	button.hide();
-	plugin.register(() => button.remove());
+class HoverButton {
+	private readonly button: HTMLElement;
+	private target: HTMLElement | null = null;
+	private hideTimer = 0;
 
-	let target: HTMLElement | null = null;
-	let hideTimer = 0;
-	const hide = (): void => {
-		button.hide();
-		target = null;
-	};
+	constructor(
+		plugin: Plugin,
+		private readonly opts: HoverButtonOptions,
+	) {
+		this.button = createDiv({ cls: ['slt-hover-button', opts.cls], attr: { 'aria-label': opts.label, role: 'button' } });
+		setIcon(this.button, opts.icon);
+		this.button.hide();
+		plugin.register(() => this.button.remove());
 
-	const show = (hit: HTMLElement): void => {
-		window.clearTimeout(hideTimer);
-		target = hit;
+		// Keep the editor focused when the button is pressed.
+		this.button.addEventListener('mousedown', (evt) => evt.preventDefault());
+		this.button.addEventListener('click', this.onClick);
+
+		// The main window, pop-outs that are already open, and pop-outs opened later.
+		const listenTo = (doc: Document): void => plugin.registerDomEvent(doc, 'mouseover', this.onMouseOver);
+		const openDocs = new Set<Document>([document]);
+		plugin.app.workspace.iterateAllLeaves((leaf) => {
+			openDocs.add(leaf.view.containerEl.doc);
+		});
+		openDocs.forEach(listenTo);
+		plugin.registerEvent(plugin.app.workspace.on('window-open', (win) => listenTo(win.doc)));
+	}
+
+	private show(hit: HTMLElement): void {
+		window.clearTimeout(this.hideTimer);
+		this.target = hit;
 		// Move the button into the hovered element's window if needed.
-		if (button.parentElement !== hit.doc.body) hit.doc.body.appendChild(button);
-		const rect = (opts.anchor?.(hit) ?? hit).getBoundingClientRect();
-		button.setCssStyles({ left: `${rect.right + 2}px`, top: `${rect.top + rect.height / 2}px` });
-		button.show();
+		if (this.button.parentElement !== hit.doc.body) hit.doc.body.appendChild(this.button);
+		const rect = (this.opts.anchor?.(hit) ?? hit).getBoundingClientRect();
+		this.button.setCssStyles({ left: `${rect.right + 2}px`, top: `${rect.top + rect.height / 2}px` });
+		this.button.show();
+	}
+
+	private readonly hide = (): void => {
+		this.button.hide();
+		this.target = null;
 	};
 
-	const onMouseOver = (evt: MouseEvent): void => {
+	private readonly onMouseOver = (evt: MouseEvent): void => {
 		// instanceOf (not instanceof) also matches elements of pop-out windows.
 		const el = evt.targetNode?.instanceOf(HTMLElement) ? evt.targetNode : null;
-		if (el && button.contains(el)) {
-			window.clearTimeout(hideTimer);
+		if (el && this.button.contains(el)) {
+			window.clearTimeout(this.hideTimer);
 			return;
 		}
-		const hit = opts.enabled() ? el?.closest<HTMLElement>(opts.selector) : null;
+		const hit = this.opts.enabled() ? el?.closest<HTMLElement>(this.opts.selector) : null;
 		if (hit) {
-			show(hit);
-		} else if (target) {
-			window.clearTimeout(hideTimer);
-			hideTimer = window.setTimeout(hide, HIDE_DELAY_MS);
+			this.show(hit);
+		} else if (this.target) {
+			window.clearTimeout(this.hideTimer);
+			this.hideTimer = window.setTimeout(this.hide, HIDE_DELAY_MS);
 		}
 	};
 
-	// The main window, pop-outs that are already open, and pop-outs opened later.
-	const listenTo = (doc: Document): void => plugin.registerDomEvent(doc, 'mouseover', onMouseOver);
-	const openDocs = new Set<Document>([document]);
-	plugin.app.workspace.iterateAllLeaves((leaf) => {
-		openDocs.add(leaf.view.containerEl.doc);
-	});
-	openDocs.forEach(listenTo);
-	plugin.registerEvent(plugin.app.workspace.on('window-open', (win) => listenTo(win.doc)));
+	private readonly onClick = (): void => {
+		const clicked = this.target;
+		this.hide();
+		if (clicked) this.opts.onClick(clicked);
+	};
+}
 
-	// Keep the editor focused when the button is pressed.
-	button.addEventListener('mousedown', (evt) => evt.preventDefault());
-	button.addEventListener('click', () => {
-		const clicked = target;
-		hide();
-		if (clicked) opts.onClick(clicked);
-	});
+export function addHoverButton(plugin: Plugin, opts: HoverButtonOptions): void {
+	new HoverButton(plugin, opts);
 }

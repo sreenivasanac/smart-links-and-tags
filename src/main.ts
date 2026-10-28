@@ -15,29 +15,8 @@ export default class SmartLinksAndTagsPlugin extends Plugin {
 		await this.loadSettings();
 		this.addSettingTab(new SmartLinksSettingTab(this.app, this));
 
-		this.registerEvent(
-			this.app.workspace.on('editor-paste', (evt, editor) => {
-				if (!this.settings.pasteMenu || evt.defaultPrevented) return;
-				const text = evt.clipboardData?.getData('text/plain').trim() ?? '';
-				if (!BARE_URL.test(text) || editor.getSelection() || this.inCodeBlock(editor)) return;
-				evt.preventDefault();
-				showPasteMenu(editor, text, this.settings.pasteAsPill);
-			}),
-		);
-
-		this.addCommand({
-			id: 'add-or-edit-link',
-			name: 'Add or edit link',
-			editorCheckCallback: (checking, editor) => {
-				const cursor = editor.getCursor('from');
-				const hit = linkAt(editor.getLine(cursor.line), cursor.ch);
-				const selection = editor.getSelection();
-				if (!hit && !selection) return false;
-				if (!checking) openLinkEditor(this.app, editor, cursor.line, hit, selection);
-				return true;
-			},
-		});
-
+		this.registerPasteMenu();
+		this.registerLinkCommand();
 		registerLinkEditing(this);
 		registerTagRemoveButton(this);
 
@@ -51,6 +30,35 @@ export default class SmartLinksAndTagsPlugin extends Plugin {
 
 	async loadSettings(): Promise<void> {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, (await this.loadData()) as Partial<SmartLinksSettings>);
+	}
+
+	/** Pasting a bare URL outside code blocks asks how to insert it. */
+	private registerPasteMenu(): void {
+		this.registerEvent(
+			this.app.workspace.on('editor-paste', (evt, editor) => {
+				if (!this.settings.pasteMenu || evt.defaultPrevented) return;
+				const text = evt.clipboardData?.getData('text/plain').trim() ?? '';
+				if (!BARE_URL.test(text) || editor.getSelection() || this.inCodeBlock(editor)) return;
+				evt.preventDefault();
+				showPasteMenu(editor, text, this.settings.pasteAsPill);
+			}),
+		);
+	}
+
+	/** "Add or edit link": edits the link at the cursor, or links the selected text. */
+	private registerLinkCommand(): void {
+		this.addCommand({
+			id: 'add-or-edit-link',
+			name: 'Add or edit link',
+			editorCheckCallback: (checking, editor) => {
+				const cursor = editor.getCursor('from');
+				const hit = linkAt(editor.getLine(cursor.line), cursor.ch);
+				const selection = editor.getSelection();
+				if (!hit && !selection) return false;
+				if (!checking) openLinkEditor(this.app, editor, cursor.line, hit, selection);
+				return true;
+			},
+		});
 	}
 
 	/** Whether the cursor is inside a fenced code block (counts the fences above it). */

@@ -40,50 +40,45 @@ class LinkModal extends Modal {
 	}
 
 	onOpen(): void {
-		const { contentEl } = this;
 		this.setTitle(this.existing ? 'Edit link' : 'Add link');
-		const submit = (): void => {
-			const url = this.url.trim();
-			if (!url) return;
-			this.close();
-			this.onDone({ action: 'save', text: this.text.trim(), url });
-		};
-		const onEnter = (evt: KeyboardEvent): void => {
-			if (evt.key === 'Enter') {
-				evt.preventDefault();
-				submit();
-			}
-		};
+		this.addField('Text', 'Link text', this.text, (v) => (this.text = v)).setDesc(
+			'Leave empty for a pill link, if you use a pill-rendering plugin.',
+		);
+		this.addField('URL', 'Paste or type a URL', this.url, (v) => (this.url = v), true);
+		this.addButtons();
+	}
 
-		new Setting(contentEl)
-			.setName('Text')
-			.setDesc('Leave empty for a pill link, if you use a pill-rendering plugin.')
-			.addText((input) => {
-				input.setPlaceholder('Link text').setValue(this.text).onChange((v) => (this.text = v));
-				input.inputEl.addClass('slt-modal-input');
-				input.inputEl.addEventListener('keydown', onEnter);
-			});
-		new Setting(contentEl).setName('URL').addText((input) => {
-			input.setPlaceholder('Paste or type a URL').setValue(this.url).onChange((v) => (this.url = v));
+	/** A labelled text input; Enter submits the dialog. */
+	private addField(name: string, placeholder: string, value: string, onChange: (v: string) => void, focus = false): Setting {
+		return new Setting(this.contentEl).setName(name).addText((input) => {
+			input.setPlaceholder(placeholder).setValue(value).onChange(onChange);
 			input.inputEl.addClass('slt-modal-input');
-			input.inputEl.addEventListener('keydown', onEnter);
-			window.setTimeout(() => input.inputEl.focus(), 0);
+			input.inputEl.addEventListener('keydown', (evt) => {
+				if (evt.key !== 'Enter') return;
+				evt.preventDefault();
+				this.submit();
+			});
+			if (focus) window.setTimeout(() => input.inputEl.focus(), 0);
 		});
+	}
 
-		const buttons = new Setting(contentEl);
-		buttons.addButton((b) => b.setButtonText(this.existing ? 'Update' : 'Add link').setCta().onClick(submit));
+	private addButtons(): void {
+		const buttons = new Setting(this.contentEl);
+		buttons.addButton((b) => b.setButtonText(this.existing ? 'Update' : 'Add link').setCta().onClick(() => this.submit()));
 		if (this.existing) {
-			buttons.addButton((b) =>
-				b
-					.setButtonText('Remove link')
-					.setDestructive()
-					.onClick(() => {
-						this.close();
-						this.onDone({ action: 'unlink' });
-					}),
-			);
+			buttons.addButton((b) => b.setButtonText('Remove link').setDestructive().onClick(() => this.finish({ action: 'unlink' })));
 		}
 		buttons.addButton((b) => b.setButtonText('Cancel').onClick(() => this.close()));
+	}
+
+	private submit(): void {
+		const url = this.url.trim();
+		if (url) this.finish({ action: 'save', text: this.text.trim(), url });
+	}
+
+	private finish(result: LinkAction): void {
+		this.close();
+		this.onDone(result);
 	}
 
 	onClose(): void {
