@@ -2,10 +2,10 @@ import { Decoration, EditorView } from '@codemirror/view';
 import { RangeSetBuilder } from '@codemirror/state';
 import { locateInEditor } from './editor-dom';
 import { addHoverButton } from './hover-button';
-import { linkAt, openLinkEditor } from './links';
+import { LINK_URL, linkAt, openLinkEditor } from './links';
 import type SmartLinksAndTagsPlugin from './main';
 
-const EXTERNAL_LINK = /\[[^\]\n]*\]\(https?:[^)\n]*\)/g;
+const EXTERNAL_LINK = new RegExp(String.raw`\[[^\]\n]*\]\(https?:${LINK_URL}\)`, 'g');
 const ATOMIC = Decoration.mark({});
 
 /**

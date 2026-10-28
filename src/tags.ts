@@ -4,8 +4,9 @@ import { addHoverButton } from './hover-button';
 import type SmartLinksAndTagsPlugin from './main';
 
 const MAX_RESULTS = 10;
-// Characters Obsidian allows in a tag: letters, numbers, _, - and / (nesting).
-const TAG_CHARS = '[\\p{L}\\p{N}_/-]';
+// Characters Obsidian allows in a tag: anything but whitespace and ASCII
+// punctuation, except _, - and / (nesting). Covers non-English letters and emoji.
+const TAG_CHARS = String.raw`[^\s!-,.:-@[-^\x60{-~]`;
 const TRIGGER = new RegExp(`(?:^|\\s)#(${TAG_CHARS}*)$`, 'u');
 const TAG_IN_LINE = new RegExp(`#${TAG_CHARS}+`, 'gu');
 const ALL_DIGITS = /^\d+$/;

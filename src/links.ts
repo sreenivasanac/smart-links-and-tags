@@ -1,4 +1,4 @@
-import { App, Editor, Modal, Setting } from 'obsidian';
+import { App, Editor, Modal, Notice, Setting } from 'obsidian';
 
 export interface LinkHit {
 	/** Column range of the whole `[text](url)` on its line. */
@@ -8,7 +8,9 @@ export interface LinkHit {
 	url: string;
 }
 
-const MARKDOWN_LINK = /\[([^\]]*)\]\(([^)]*)\)/g;
+/** Link destination: any characters, allowing one level of balanced parentheses as CommonMark does. */
+export const LINK_URL = String.raw`(?:[^()\n]|\([^()\n]*\))*`;
+const MARKDOWN_LINK = new RegExp(String.raw`\[([^\]\n]*)\]\((${LINK_URL})\)`, 'g');
 
 /** The markdown link `[text](url)` that covers column `ch` of `line`, if any. */
 export function linkAt(line: string, ch: number): LinkHit | null {
@@ -96,7 +98,13 @@ class LinkModal extends Modal {
 export function openLinkEditor(app: App, editor: Editor, line: number, hit: LinkHit | null, selection = ''): void {
 	const from = hit ? { line, ch: hit.start } : editor.getCursor('from');
 	const to = hit ? { line, ch: hit.end } : editor.getCursor('to');
+	const original = editor.getRange(from, to);
 	new LinkModal(app, hit, hit ? hit.text : selection, (result) => {
+		// The note may have changed while the dialog was open (typing, sync).
+		if (editor.getRange(from, to) !== original) {
+			new Notice('The link changed while the dialog was open. Nothing was replaced.');
+			return;
+		}
 		if (result.action === 'unlink') {
 			editor.replaceRange(hit?.text ?? '', from, to);
 		} else {

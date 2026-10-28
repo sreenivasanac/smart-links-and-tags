@@ -9,6 +9,7 @@ interface PasteOption {
 
 const MAX_TITLE_LENGTH = 200;
 const SCREEN_MARGIN = 8;
+const MODIFIER_KEYS = new Set(['Shift', 'Control', 'Alt', 'Meta']);
 
 /** Inserts text, then refocuses the editor (the menu took focus). */
 function insert(editor: Editor, text: string): void {
@@ -128,8 +129,8 @@ class PasteMenu {
 		else if (evt.key === 'Enter') this.choose(this.selected);
 		else if (evt.key === 'Escape') this.close();
 		else {
-			// Keep typing: the key goes to the editor as usual.
-			if (evt.key.length === 1 || evt.key === 'Backspace') this.close();
+			// Any other key (typing, Tab, Backspace…) dismisses the menu and acts as usual.
+			if (!MODIFIER_KEYS.has(evt.key)) this.close();
 			return;
 		}
 		evt.preventDefault();

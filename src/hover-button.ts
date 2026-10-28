@@ -58,8 +58,14 @@ export function addHoverButton(plugin: Plugin, opts: HoverButtonOptions): void {
 		}
 	};
 
-	plugin.registerDomEvent(document, 'mouseover', onMouseOver);
-	plugin.registerEvent(plugin.app.workspace.on('window-open', (win) => plugin.registerDomEvent(win.doc, 'mouseover', onMouseOver)));
+	// The main window, pop-outs that are already open, and pop-outs opened later.
+	const listenTo = (doc: Document): void => plugin.registerDomEvent(doc, 'mouseover', onMouseOver);
+	const openDocs = new Set<Document>([document]);
+	plugin.app.workspace.iterateAllLeaves((leaf) => {
+		openDocs.add(leaf.view.containerEl.doc);
+	});
+	openDocs.forEach(listenTo);
+	plugin.registerEvent(plugin.app.workspace.on('window-open', (win) => listenTo(win.doc)));
 
 	// Keep the editor focused when the button is pressed.
 	button.addEventListener('mousedown', (evt) => evt.preventDefault());
